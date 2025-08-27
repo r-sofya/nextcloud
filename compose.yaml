@@ -1,35 +1,44 @@
 services:
-  nextcloud-aio-mastercontainer:
-    image: ghcr.io/nextcloud-releases/all-in-one:latest
-    init: true
+  nextcloud:
+    image: nextcloud:30.0.2
     restart: always
-    container_name: nextcloud-aio-mastercontainer # This line is not allowed to be changed as otherwise AIO will not work correctly
-    volumes:
-      - nextcloud_aio_mastercontainer:/mnt/docker-aio-config # This line is not allowed to be changed as otherwise the built-in backup solution will not work
-      - /var/run/docker.sock:/var/run/docker.sock:ro # May be changed on macOS, Windows or docker rootless. See the applicable documentation. If adjusting, don't forget to also set 'WATCHTOWER_DOCKER_[...]
-    network_mode: bridge
     ports:
-      - 80:80
-      - 8080:8080
-      - 8443:8443
-    env_file:
-      - .env
+      - 80
+    volumes:
+      - nextcloud_data:/var/www/html
     environment:
-      NEXTCLOUD_OBJECTSTORE_S3_HOST: ${S3_HOST}
-      NEXTCLOUD_OBJECTSTORE_S3_BUCKET: ${S3_BUCKET}
-      NEXTCLOUD_OBJECTSTORE_S3_KEY: ${S3_KEY}
-      NEXTCLOUD_OBJECTSTORE_S3_SECRET: ${S3_SECRET}
-      NEXTCLOUD_OBJECTSTORE_S3_PORT: ${S3_PORT}
-      NEXTCLOUD_OBJECTSTORE_S3_SSL: ${S3_SSL}
-      NEXTCLOUD_OBJECTSTORE_S3_REGION: ${S3_REGION}
-      NEXTCLOUD_OBJECTSTORE_S3_AUTOCREATE: ${S3_AUTOCREATE}
-      NEXTCLOUD_OBJECTSTORE_S3_USEPATH_STYLE: true
-      NEXTCLOUD_DATADIR: s3:// # S3 as default storage
+      - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_DOMAIN}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_SECRET_PASSWORD}
+      - OVERWRITEPROTOCOL=${NEXTCLOUD_OVERWRITEPROTOCOL}
+      # S3/B2 settings
+      - OBJECTSTORE_S3_BUCKET=${NEXTCLOUD_S3_BUCKET}
+      - OBJECTSTORE_S3_KEY=${NEXTCLOUD_S3_KEY}
+      - OBJECTSTORE_S3_SECRET=${NEXTCLOUD_S3_SECRET}
+      - OBJECTSTORE_S3_HOST=${NEXTCLOUD_S3_HOST}
+      - OBJECTSTORE_S3_PORT=${NEXTCLOUD_S3_PORT}
+      - OBJECTSTORE_S3_REGION=${NEXTCLOUD_S3_REGION}
+      - OBJECTSTORE_S3_SSL=${NEXTCLOUD_S3_SSL}
+      - OBJECTSTORE_S3_AUTOCREATE=${NEXTCLOUD_S3_AUTOCREATE}
+      - OBJECTSTORE_S3_USEPATHSTYLE=${NEXTCLOUD_S3_USEPATHSTYLE}
+
+  nextcloud_db:
+    image: mariadb
+    restart: always
+    volumes:
+      - nextcloud_db_data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_SECRET_PASSWORD_ROOT}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_SECRET_PASSWORD}
 
 volumes:
-  nextcloud_aio_mastercontainer:
-    name: nextcloud_aio_mastercontainer
-  # caddy_certs:
-  # caddy_config:
-  # caddy_data:
-  # caddy_sites:
+  nextcloud_data:
+  nextcloud_db_data:
+
+networks:
+  dokploy-network:
+    external: true
